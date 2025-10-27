@@ -42,7 +42,10 @@ jobs:
         with:
           images: ghcr.io/${{ env.IMAGE_NAME }}
           tags: |
+            # tag with'latest'
             type=raw,value=latest,enable=true
+            # tag the new commit SHA
+            type=sha,format=short,suffix=-astro,enable=true
 
       # Step 4: Build and push the Docker image
       - name: Build and push Docker image
