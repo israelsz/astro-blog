@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   GITOPS_REPO: israelsz/argocd-gitops # ArgoCD repo
   GITOPS_BRANCH: main                 # Branch to update in ArgoCD repo
-  GITOPS_VALUES_PATH: gitops/dev-apps/astro-blog/values.yaml # Path to values file
+  GITOPS_VALUES_PATH: dev-apps/astro-blog/values.yaml # Path to values file
 
 # Jobs
 jobs:
@@ -77,7 +77,7 @@ jobs:
           SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -- '-astro' | head -n1 | awk -F ':' '{print $2}')
           echo "tag=${SHA_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Checkout GitOps repository (Repo1)
+      - name: Checkout GitOps repository
         uses: actions/checkout@v4
         with:
           repository: ${{ env.GITOPS_REPO }}
