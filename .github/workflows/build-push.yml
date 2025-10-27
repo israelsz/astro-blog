@@ -45,7 +45,7 @@ jobs:
             # tag with'latest'
             type=raw,value=latest,enable=true
             # tag the new commit SHA
-            type=sha,format=short,suffix=-astro,enable=true
+            type=sha,format=short,prefix=,suffix=-astro,enable=true
 
       # Step 4: Build and push the Docker image
       - name: Build and push Docker image
