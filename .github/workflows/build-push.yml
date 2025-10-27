@@ -10,6 +10,9 @@ on:
 env:
   # The name of the Docker image
   IMAGE_NAME: ${{ github.repository }}
+  GITOPS_REPO: israelsz/argocd-gitops # ArgoCD repo
+  GITOPS_BRANCH: main                 # Branch to update in ArgoCD repo
+  GITOPS_VALUES_PATH: gitops/dev-apps/astro-blog/values.yaml # Path to values file
 
 # Jobs
 jobs:
@@ -64,3 +67,44 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+
+      # -- Update GitOps repository with new image tag --
+      - name: Extract Commit SHA Tag
+        id: get_sha_tag
+        # Extract the tag like 'xxxxxxx-astro' from the multi-line output
+        run: |
+          SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -- '-astro' | head -n1 | awk -F ':' '{print $2}')
+          echo "tag=${SHA_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Checkout GitOps repository (Repo1)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          ref: ${{ env.GITOPS_BRANCH }}
+          token: ${{ secrets.GIT_OPS_PAT }} # Use the PAT
+          path: gitops-repo # Checkout into a sub-directory
+
+      - name: Update image tag in values.yaml
+        run: |
+          NEW_TAG="${{ steps.get_sha_tag.outputs.tag }}"
+          sed -i -E "s|^(\s*tag:\s*).*|\1\"${NEW_TAG}\"|" gitops-repo/${{ env.GITOPS_VALUES_PATH }}
+          echo "Updated tag to ${NEW_TAG} in gitops-repo/${{ env.GITOPS_VALUES_PATH }}"
+
+      - name: Commit and push changes to GitOps repo
+        run: |
+          cd gitops-repo
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          # Check if there are changes to commit
+          if git diff --quiet HEAD -- ${{ env.GITOPS_VALUES_PATH }}; then
+            echo "No changes detected in values.yaml. Skipping commit."
+          else
+            git add ${{ env.GITOPS_VALUES_PATH }}
+            git commit -m "ci(astro-blog): Update image tag to ${{ steps.get_sha_tag.outputs.tag }}"
+            git push origin ${{ env.GITOPS_BRANCH }}
+            echo "Pushed updated values.yaml to GitOps repo."
+          fi
+        env:
+          # Use the PAT for pushing too (implicitly used by checkout action's token)
+          GITHUB_TOKEN: ${{ secrets.GIT_OPS_PAT }}
